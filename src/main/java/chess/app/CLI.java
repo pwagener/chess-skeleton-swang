@@ -72,13 +72,13 @@ public class CLI {
                 } else if (input.equals("board")) {
                     writeOutput("Current Game:");
                 } else if (input.equals("list")) {
-                	Map<Position, List<Position>> allMove = gameState.getCurrentPossibleMoves(); 
-                	if (allMove.size() == 0) {
+                	Map<Position, List<Position>> allMove = gameState.getCurrentLegalMoves();
+                	if (allMove.size() == 0) { 
                 		writeOutput("No possible moves.");
                 	} else {
                 		for (Map.Entry<Position, List<Position>> pair : allMove.entrySet()) {
                 			Position key = pair.getKey();
-                			for (Position p : pair.getValue()) {
+                			for (Position p : pair.getValue()) { 
                 				writeOutput(key.toString() + " " + p.toString());
                 			}
                 		}

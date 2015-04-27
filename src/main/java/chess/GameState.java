@@ -123,24 +123,17 @@ public class GameState {
     	Piece piece = getPieceAt(from);
     	if (piece != null && piece.getOwner() == currentPlayer) {
     		List<Position> possibleMoves = piece.getMoveFinder().findMoves(this, from);
-    		if (possibleMoves.contains(to)) {
+    		if (possibleMoves.contains(to) && !isInCheckAfterMove(currentPlayer, piece, from, to)) {
     			removeAtPosition(from);
     			placePiece(piece, to);
     			
-    			boolean kingCaptured = false;
     			if (currentPlayer == Player.Black) {
-    				if (whiteKingPos.equals(to)) {
-    					kingCaptured = true;
-    				}
     				currentPlayer = Player.White;
     			} else {
-    				if (blackKingPos.equals(to)) {
-    					kingCaptured = true;
-    				}
     				currentPlayer = Player.Black;
     			}
 
-    			isOver = kingCaptured || isInCheckMate();
+    			isOver = isInCheckMate(currentPlayer);
 
     			return true;
     		}
@@ -152,47 +145,61 @@ public class GameState {
      * Returns all possible movement of the current player.
      * @return
      */
-    public Map<Position, List<Position>> getCurrentPossibleMoves() {
-    	return getPossibleMoves(currentPlayer);
+    public Map<Position, List<Position>> getCurrentLegalMoves() {
+    	return getLegalMoves(currentPlayer);
+    }
+
+    /**
+     * Returns all legal movement of the player.
+     * @return
+     */
+    private Map<Position, List<Position>> getLegalMoves(Player player) {
+    	Map<Position, List<Position>> totalMoves = new HashMap<Position, List<Position>>();
+    	Map<Position, List<Position>> possibleMoves = getPossibleMoves(player);
+    	
+    	if (possibleMoves != null && possibleMoves.size() > 0) {
+    		for (Map.Entry<Position, List<Position>> pair : possibleMoves.entrySet()) {
+    			Piece currentPiece = getPieceAt(pair.getKey());
+    			List<Position> legalMoves = new ArrayList<Position>();
+    			for (Position p : pair.getValue()) {
+    				//Filter out moves that will leave the king in check
+    				if (!isInCheckAfterMove(player, currentPiece, pair.getKey(), p)) {
+    					legalMoves.add(p);
+    				}
+    			}
+    			if (legalMoves.size() > 0) {
+    				totalMoves.put(pair.getKey(), legalMoves);
+    			}
+    		}
+
+    	}
+    	return totalMoves;
     }
     
     /**
-     * This is used to check if the current player in is checkmate.
+     * This is used to check if the player in is checkmate
      * 
-     * @return true if the current player loses due to checkmate
+     * @param checkPlayer
+     * @return true if the player has no more legal move
      */
-    private boolean isInCheckMate() {
-    	Set<Position> attackerMap = findAttackerMovement();
-    	Position targetKingPos = (currentPlayer == Player.Black)? blackKingPos: whiteKingPos;
+    private boolean isInCheckMate(Player checkPlayer) {
+    	Set<Position> attackerMap = findAttackerMovement(checkPlayer);
 
-		//At this point we have all paths to enemy, check if there is paths
+		//At this point we have all paths to enemy, check if there is paths that will get us out of check
 		if (attackerMap.size() > 0) {
-    		Piece targetKing = getPieceAt(targetKingPos);
-
-    		//First king tries escaping
-    		Map<Position, List<Position>> friendsMoves = getPossibleMoves(currentPlayer);
-    		List<Position> possibleEscape = friendsMoves.get(targetKingPos);
-    		if (possibleEscape != null) {
-    			for (Position p : possibleEscape) {
-    				if (!isInCheckAfterMove(p, targetKing, targetKingPos, p)) {
-    					return false;
-    				}
-    			}
-    			friendsMoves.remove(targetKingPos);
-    		}
-    		
-    		//Try attack attack or block
-    		for (Map.Entry<Position, List<Position>> friendPair : friendsMoves.entrySet()) {
-    			Position friendPosition = friendPair.getKey();
-    			Piece friend = getPieceAt(friendPosition);
-    			for (Position friendMovePosition : friendPair.getValue()) {
-    				if (attackerMap.contains(friendMovePosition)) {
-    					if (!isInCheckAfterMove(targetKingPos, friend, friendPosition, friendMovePosition)) {
-    						return false;
-    					}
-    				}
-    			}
-    		}
+			Map<Position, List<Position>> possibleMoves = getPossibleMoves(checkPlayer);
+			
+			if (possibleMoves != null && possibleMoves.size() > 0) {
+				for (Map.Entry<Position, List<Position>> possibleMove : possibleMoves.entrySet()) {
+					Position possibleFromPosition = possibleMove.getKey();
+					Piece possiblePiece = getPieceAt(possibleFromPosition);
+					for (Position possibleToPosition : possibleMove.getValue()) {
+						if (!isInCheckAfterMove(checkPlayer, possiblePiece, possibleFromPosition, possibleToPosition)) {
+							return false;
+						}
+					}
+				}
+			}
     		return true;
 		}
 		
@@ -201,12 +208,14 @@ public class GameState {
     
     /**
      * Returns all paths (positions) that leads to attackers
+     * 
+     * @param currentPlayer
      * @return
      */
-    private Set<Position> findAttackerMovement() {
+    private Set<Position> findAttackerMovement(Player checkPlayer) {
     	Set<Position> attackerMap = new HashSet<Position>();
     	
-    	Position targetKingPos = (currentPlayer == Player.Black)? blackKingPos:whiteKingPos;
+    	Position targetKingPos = (checkPlayer == Player.Black)? blackKingPos:whiteKingPos;
 
     	//Search open path starting from king
     	List<Position> path = new ArrayList<Position>();
@@ -232,42 +241,42 @@ public class GameState {
 		//Check RIGHT
 		col+=2;
 		Position knightPos = new Position(col, row+1);
-		if (isEnemyKnight(currentPlayer, knightPos)) {
+		if (isEnemyKnight(checkPlayer, knightPos)) {
 			attackerMap.add(knightPos);
 		}
 		knightPos = new Position(col, row-1);
-		if (isEnemyKnight(currentPlayer, knightPos)) {
+		if (isEnemyKnight(checkPlayer, knightPos)) {
 			attackerMap.add(knightPos);
 		}
 		//Check LEFT
 		col-=4;
 		knightPos = new Position(col, row+1);
-		if (isEnemyKnight(currentPlayer, knightPos)) {
+		if (isEnemyKnight(checkPlayer, knightPos)) {
 			attackerMap.add(knightPos);
 		}
 		knightPos = new Position(col, row-1);
-		if (isEnemyKnight(currentPlayer, knightPos)) {
+		if (isEnemyKnight(checkPlayer, knightPos)) {
 			attackerMap.add(knightPos);
 		}
 		//Check UP
 		col = targetKingPos.getColumn();
 		row = targetKingPos.getRow() + 2;
 		knightPos = new Position((char) (col+1), row);
-		if (isEnemyKnight(currentPlayer, knightPos)) {
+		if (isEnemyKnight(checkPlayer, knightPos)) {
 			attackerMap.add(knightPos);
 		}
 		knightPos = new Position((char) (col-1), row);
-		if (isEnemyKnight(currentPlayer, knightPos)) {
+		if (isEnemyKnight(checkPlayer, knightPos)) {
 			attackerMap.add(knightPos);
 		}
 		//Check DOWN
 		row -= 4;
 		knightPos = new Position((char) (col+1), row);
-		if (isEnemyKnight(currentPlayer, knightPos)) {
+		if (isEnemyKnight(checkPlayer, knightPos)) {
 			attackerMap.add(knightPos);
 		}
 		knightPos = new Position((char) (col-1), row);
-		if (isEnemyKnight(currentPlayer, knightPos)) {
+		if (isEnemyKnight(checkPlayer, knightPos)) {
 			attackerMap.add(knightPos);
 		}
 		
@@ -384,14 +393,14 @@ public class GameState {
      * @param player
      * @return
      */
-    private Map<Position, List<Position>> getPossibleMoves(Player player) {
+    private Map<Position, List<Position>> getPossibleMoves(Player checkPlayer) {
     	Map<Position, List<Position>> totalMoves = new HashMap<Position, List<Position>>();
     	
     	for (Map.Entry<Position, Piece> pair : positionToPieceMap.entrySet()) {
     		Piece currentPiece = pair.getValue();
-    		if (currentPiece.getOwner() == player) {
+    		if (currentPiece.getOwner() == checkPlayer) {
     			List<Position> possibleMoves = currentPiece.getMoveFinder().findMoves(this, pair.getKey()); 
-    			if (possibleMoves.size() > 0) {
+    			if (possibleMoves != null && possibleMoves.size() > 0) {
     				totalMoves.put(pair.getKey(), possibleMoves);
     			}
     		}
@@ -401,14 +410,15 @@ public class GameState {
     }
 
     /**
-     * Checks to see if the current player is still in check even after make a movement to change the state of the board.
-     * @param kingPosition
+     * 
+     * Checks to see if the check player is still in check after making a movement
+     * @param checkPlayer
      * @param pieceToMove
      * @param fromPosition
      * @param toPosition
      * @return
      */
-    private boolean isInCheckAfterMove(Position kingPosition, Piece pieceToMove, Position fromPosition, Position toPosition) {
+    private boolean isInCheckAfterMove(Player checkPlayer, Piece pieceToMove, Position fromPosition, Position toPosition) {
     	boolean stillInCheck = false;
     	//Could be an run and attack, save a reference
     	Piece destinationPiece = getPieceAt(toPosition);
@@ -416,7 +426,7 @@ public class GameState {
     	removeAtPosition(fromPosition);
     	placePiece(pieceToMove, toPosition);
     	
-    	stillInCheck = findAttackerMovement().size() > 0;
+    	stillInCheck = findAttackerMovement(checkPlayer).size() > 0;
 
     	//Reverse move
     	placePiece(pieceToMove, fromPosition);

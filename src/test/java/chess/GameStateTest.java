@@ -1,5 +1,9 @@
 package chess;
 
+import java.util.List;
+import java.util.Map;
+
+import chess.pieces.Bishop;
 import chess.pieces.King;
 import chess.pieces.Knight;
 import chess.pieces.Pawn;
@@ -52,6 +56,39 @@ public class GameStateTest {
         Piece blackQueen = state.getPieceAt("d8");
         assertTrue("A queen should be at d8", blackQueen instanceof Queen);
         assertEquals("The queen at d8 should be owned by Black", Player.Black, blackQueen.getOwner());
+    }
+    
+    @Test
+    public void testLegelMove() {
+    	//End of game
+    	state.reset();
+    	assertTrue(state.movePiece("f2", "f3"));
+    	assertFalse(state.isOver());
+    	assertTrue(state.movePiece("e7", "e6"));
+    	assertFalse(state.isOver());
+    	assertTrue(state.movePiece("g2", "g4"));
+    	assertFalse(state.isOver());
+    	assertTrue(state.movePiece("d8", "h4"));
+    	assertTrue(state.isOver());
+    	assertTrue("No more moves.", state.getCurrentLegalMoves().size() == 0);
+
+    	//Last move to save king
+    	state.reset();
+    	assertTrue(state.movePiece("f2", "f3"));
+    	assertFalse(state.isOver());
+    	assertTrue(state.movePiece("e7", "e6"));
+    	assertFalse(state.isOver());
+    	assertTrue(state.movePiece("a2", "a3"));
+    	assertFalse(state.isOver());
+    	assertTrue(state.movePiece("d8", "h4"));
+    	assertFalse(state.isOver());
+    	Map<Position, List<Position>> lastMove = state.getCurrentLegalMoves();
+    	assertTrue("Last move.", lastMove.size() == 1);
+    	List<Position> positionList = lastMove.get(new Position("g2"));
+    	assertNotNull(positionList);
+    	Position pos = positionList.get(0);
+    	assertNotNull(pos);
+    	assertEquals("Last move.", pos, new Position("g3"));
     }
     
     @Test
@@ -117,23 +154,22 @@ public class GameStateTest {
     public void testManualCheckMate() {
     	TestableGameState testState = new TestableGameState();
 
-    	// Two-way attack
+    	// Test Pawn direction, king will be able to escape
     	testState.whiteKingPos = new Position("e1");
     	testState.blackKingPos = new Position("d8");
     	testState.placePiece(new King(Player.White), new Position("e1"));
-    	testState.placePiece(new Pawn(Player.White), new Position("d1"));
-    	testState.placePiece(new Pawn(Player.White), new Position("d2"));
-    	testState.placePiece(new Pawn(Player.White), new Position("f1"));
+    	testState.placePiece(new Knight(Player.White), new Position("d2"));
+    	testState.placePiece(new Bishop(Player.White), new Position("f2"));
     	testState.placePiece(new Pawn(Player.White), new Position("a2"));
     	testState.placePiece(new King(Player.Black), new Position("d8"));
-    	testState.placePiece(new Rook(Player.Black), new Position("e8"));
-    	testState.placePiece(new Queen(Player.Black), new Position("e7"));
+    	testState.placePiece(new Pawn(Player.Black), new Position("f1"));
+    	testState.placePiece(new Rook(Player.Black), new Position("c8"));
     	assertTrue(testState.movePiece("a2", "a4"));
     	assertFalse(testState.isOver());
-    	assertTrue(testState.movePiece("e7", "h4"));
-    	assertTrue(testState.isOver());
+    	assertTrue(testState.movePiece("c8", "c1"));
+    	assertFalse(testState.isOver());
 
-    	// Two-way attack, with one attacker attacked
+    	// Two-way attack
     	testState.clearBoard();
     	testState.whiteKingPos = new Position("e1");
     	testState.blackKingPos = new Position("d8");
@@ -142,10 +178,9 @@ public class GameStateTest {
     	testState.placePiece(new Pawn(Player.White), new Position("d2"));
     	testState.placePiece(new Pawn(Player.White), new Position("f1"));
     	testState.placePiece(new Pawn(Player.White), new Position("a2"));
-    	testState.placePiece(new Rook(Player.White), new Position("h1"));
     	testState.placePiece(new King(Player.Black), new Position("d8"));
     	testState.placePiece(new Rook(Player.Black), new Position("e8"));
-    	testState.placePiece(new Queen(Player.Black), new Position("e7"));
+    	testState.placePiece(new Bishop(Player.Black), new Position("e7"));
     	assertTrue(testState.movePiece("a2", "a4"));
     	assertFalse(testState.isOver());
     	assertTrue(testState.movePiece("e7", "h4"));
@@ -192,18 +227,18 @@ public class GameStateTest {
     	testState.blackKingPos = new Position("d8");
     	testState.placePiece(new King(Player.White), new Position("e1"));
     	testState.placePiece(new Pawn(Player.White), new Position("a2"));
+    	testState.placePiece(new Pawn(Player.White), new Position("e2"));
     	testState.placePiece(new Pawn(Player.White), new Position("d1"));
     	testState.placePiece(new Pawn(Player.White), new Position("d2"));
-    	testState.placePiece(new Pawn(Player.White), new Position("f1"));
     	testState.placePiece(new King(Player.Black), new Position("d8"));
-    	testState.placePiece(new Pawn(Player.Black), new Position("f3"));
-    	testState.placePiece(new Rook(Player.Black), new Position("e8"));
+    	testState.placePiece(new Bishop(Player.Black), new Position("g3"));
+    	testState.placePiece(new Rook(Player.Black), new Position("f2"));
     	assertTrue(testState.movePiece("a2", "a4"));
     	assertFalse(testState.isOver());
-    	assertTrue(testState.movePiece("f3", "f2"));
+    	assertTrue(testState.movePiece("f2", "f1"));
     	assertFalse(testState.isOver());
 
-    	// Two-way attack, King will be able to run and attack
+    	// Two-way attack, King will not be able to run and attack
     	testState.clearBoard();
     	testState.whiteKingPos = new Position("d1");
     	testState.blackKingPos = new Position("c8");
@@ -241,7 +276,7 @@ public class GameStateTest {
     	// Knight attack
     	testState.clearBoard();
     	testState.whiteKingPos = new Position("e1");
-    	testState.blackKingPos = new Position("d8");
+    	testState.blackKingPos = new Position("c8");
     	testState.placePiece(new King(Player.White), new Position("e1"));
     	testState.placePiece(new Rook(Player.White), new Position("e2"));
     	testState.placePiece(new Rook(Player.White), new Position("d1"));
@@ -249,7 +284,7 @@ public class GameStateTest {
     	testState.placePiece(new Pawn(Player.White), new Position("f2"));
     	testState.placePiece(new Pawn(Player.White), new Position("f1"));
     	testState.placePiece(new Pawn(Player.White), new Position("a2"));
-    	testState.placePiece(new King(Player.Black), new Position("d8"));
+    	testState.placePiece(new King(Player.Black), new Position("c8"));
     	testState.placePiece(new Knight(Player.Black), new Position("h4"));
     	assertTrue(testState.movePiece("a2", "a4"));
     	assertFalse(testState.isOver());
