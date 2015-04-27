@@ -38,6 +38,23 @@ public class Position {
         return column;
     }
 
+	/**
+	 * Check board boundary
+	 * @param col
+	 * @param row
+	 * @return true if the check position is within board boundary
+	 */
+	public static boolean isOnBoard(char col, int row) {
+		return (col >= Position.MIN_COLUMN) &&
+				(col <= Position.MAX_COLUMN) &&
+				(row >= Position.MIN_ROW) &&
+				(row <= Position.MAX_ROW);
+	}
+	
+	public boolean isOnBoard() {
+		return isOnBoard(column, row);
+	}
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

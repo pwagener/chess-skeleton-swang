@@ -1,6 +1,7 @@
 package chess.pieces;
 
 import chess.Player;
+import chess.pieces.move.MoveFinder;
 
 /**
  * A base class for chess pieces
@@ -25,5 +26,13 @@ public abstract class Piece {
         return owner;
     }
 
+    /**
+     * Return all possible movement given its position
+     * @param p
+     * @return
+     */
+    public abstract MoveFinder getMoveFinder();
+
     protected abstract char getIdentifyingCharacter();
+    
 }

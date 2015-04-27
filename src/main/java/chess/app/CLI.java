@@ -1,8 +1,14 @@
-package chess;
+package chess.app;
 
+import chess.GameState;
+import chess.Player;
+import chess.Position;
 import chess.pieces.Piece;
 
 import java.io.*;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * This class provides the basic CLI interface to the Chess game.
@@ -47,8 +53,10 @@ public class CLI {
         doNewGame();
 
         while (true) {
-            showBoard();
-            writeOutput(gameState.getCurrentPlayer() + "'s Move");
+            if (!gameState.isOver()) {
+            	showBoard();
+            	writeOutput(gameState.getCurrentPlayer() + "'s Move");
+            }
 
             String input = getInput();
             if (input == null) {
@@ -64,9 +72,37 @@ public class CLI {
                 } else if (input.equals("board")) {
                     writeOutput("Current Game:");
                 } else if (input.equals("list")) {
-                    writeOutput("====> List Is Not Implemented (yet) <====");
+                	Map<Position, List<Position>> allMove = gameState.getCurrentPossibleMoves(); 
+                	if (allMove.size() == 0) {
+                		writeOutput("No possible moves.");
+                	} else {
+                		for (Map.Entry<Position, List<Position>> pair : allMove.entrySet()) {
+                			Position key = pair.getKey();
+                			for (Position p : pair.getValue()) {
+                				writeOutput(key.toString() + " " + p.toString());
+                			}
+                		}
+                	}
                 } else if (input.startsWith("move")) {
-                    writeOutput("====> Move Is Not Implemented (yet) <====");
+                	if (gameState.isOver()) {
+                		showBoard();
+                		writeOutput("The game was over.");
+                	} else {
+                		String[] splits = input.split(" ");
+                		if (splits.length != 3 ||
+                				!Pattern.matches("[a-h][1-8]", splits[1]) && Pattern.matches("[a-h][1-8]", splits[2])) {
+                			writeOutput("Invalid command. Command format is 'move b2 b3'.");
+                		} else {
+                			if (!gameState.movePiece(splits[1], splits[2])) {
+                				writeOutput("Illegal move!");
+                			} else {
+                				if (gameState.isOver()) {
+                					writeOutput("The game is over. Congrats to "+((gameState.getCurrentPlayer() == Player.Black)? Player.White: Player.Black)+".");
+                					showBoard();
+                				}
+                			}
+                		}
+                	}
                 } else {
                     writeOutput("I didn't understand that.  Type 'help' for a list of commands.");
                 }

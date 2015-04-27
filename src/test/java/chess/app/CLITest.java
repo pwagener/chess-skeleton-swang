@@ -1,10 +1,12 @@
-package chess;
+package chess.app;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
+
+import chess.app.CLI;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
